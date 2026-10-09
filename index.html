@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Last 10 Minutes</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #080b12;
+    color: #d9e7ff;
+    font-family: Consolas, "Courier New", monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .game {
+    width: 100%;
+    max-width: 760px;
+    border: 1px solid #273954;
+    background: #0d1320;
+    box-shadow: 0 0 50px #142b4833;
+    padding: 26px;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    border-bottom: 1px solid #273954;
+    padding-bottom: 16px;
+  }
+
+  h1 {
+    font-size: clamp(22px, 5vw, 34px);
+    margin: 0;
+    color: #79baff;
+    letter-spacing: 2px;
+  }
+
+  .subtitle, .muted { color: #8498b6; }
+
+  .timer {
+    color: #ff687d;
+    font-size: 27px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 18px 0;
+    color: #91a9ca;
+    font-size: 13px;
+  }
+
+  .scene {
+    border: 1px solid #263d5d;
+    background:
+      radial-gradient(ellipse at center, #172d49 0%, #0b1220 72%);
+    min-height: 175px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 25px;
+    margin: 20px 0;
+  }
+
+  .symbol {
+    font-size: 48px;
+    color: #74b8ff;
+    text-shadow: 0 0 25px #318bff88;
+    margin-bottom: 10px;
+  }
+
+  h2 { margin: 8px 0; font-size: 19px; }
+
+  .description {
+    color: #b4c7e4;
+    line-height: 1.7;
+    max-width: 480px;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  button, input {
+    font: inherit;
+    border: 1px solid #365477;
+    border-radius: 3px;
+    padding: 13px;
+  }
+
+  button {
+    background: #14243a;
+    color: #d9e7ff;
+    cursor: pointer;
+    transition: .15s;
+  }
+
+  button:hover:not(:disabled) {
+    background: #203c5e;
+    border-color: #79baff;
+  }
+
+  button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  .terminal {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  input {
+    min-width: 0;
+    flex: 1;
+    background: #070b12;
+    color: #8ed4ff;
+    letter-spacing: 4px;
+  }
+
+  .primary {
+    background: #174b76;
+    border-color: #4a9cdb;
+  }
+
+  .log {
+    margin-top: 22px;
+    padding: 15px;
+    background: #080d16;
+    border-left: 3px solid #477db5;
+    min-height: 100px;
+    line-height: 1.7;
+    color: #a9bedc;
+    font-size: 14px;
+  }
+
+  .log strong { color: #80c4ff; }
+
+  .clues {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .clue {
+    border: 1px solid #31513f;
+    color: #8fe0b0;
+    background: #10241d;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .hidden { display: none !important; }
+
+  .restart { margin-top: 16px; width: 100%; }
+
+  footer {
+    text-align: center;
+    color: #60748e;
+    margin-top: 20px;
+    font-size: 11px;
+  }
+
+  @media (max-width: 480px) {
+    .game { padding: 16px; }
+    .top { align-items: flex-start; flex-direction: column; }
+    .actions { grid-template-columns: 1fr; }
+    .terminal { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<main class="game">
+  <div class="top">
+    <div>
+      <h1>THE LAST 10 MINUTES</h1>
+      <div class="subtitle">SIMULATION ESCAPE PROTOCOL v1.0</div>
+    </div>
+    <div>
+      <div class="muted">TIME REMAINING</div>
+      <div class="timer" id="timer">10:00</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span>LOOP: <strong id="loop">01</strong></span>
+    <span>ROOM: <strong>ZERO</strong></span>
+    <span>STATUS: <strong id="status">TRAPPED</strong></span>
+  </div>
+
+  <section class="scene">
+    <div>
+      <div class="symbol" id="symbol">⌁</div>
+      <h2 id="sceneTitle">You wake up.</h2>
+      <div class="description" id="description">
+        A silent room. A locked door. A clock counting backward.
+        A voice whispers: "You have ten minutes. Remember what matters."
+      </div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button id="clockBtn" onclick="inspect('clock')">◷ Inspect clock</button>
+    <button id="mirrorBtn" onclick="inspect('mirror')">▧ Inspect mirror</button>
+    <button id="consoleBtn" onclick="inspect('console')">⌘ Inspect terminal</button>
+    <button id="doorBtn" onclick="inspect('door')">▣ Inspect exit</button>
+  </div>
+
+  <div class="terminal">
+    <input id="code" maxlength="5" inputmode="numeric"
+      placeholder="ENTER 5-DIGIT CODE" aria-label="Five digit escape code">
+    <button class="primary" id="submit" onclick="tryCode()">UNLOCK</button>
+  </div>
+
+  <div class="clues" id="clues"></div>
+
+  <div class="log" id="log" aria-live="polite">
+    <strong>SYSTEM:</strong> Simulation started. Investigate the room.
+    Your discoveries survive the loop resets.
+  </div>
+
+  <button class="restart hidden" id="restart" onclick="startGame()">
+    PLAY AGAIN
+  </button>
+
+  <footer>EVERY LOOP RESETS THE ROOM. YOUR MEMORIES ARE YOURS.</footer>
+</main>
+
+<script>
+  const TOTAL_TIME = 600;
+  const LOOP_TIME = 60;
+  const SECRET_CODE = "03174";
+
+  let remaining = TOTAL_TIME;
+  let loopNumber = 1;
+  let loopRemaining = LOOP_TIME;
+  let cluesFound = new Set();
+  let ended = false;
+  let interval = null;
+  let inspectedThisLoop = new Set();
+
+  const $ = id => document.getElementById(id);
+
+  function writeLog(title, message) {
+    $("log").innerHTML =
+      `<strong>${title}:</strong> ${message}`;
+  }
+
+  function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+
+  function updateUI() {
+    $("timer").textContent = formatTime(remaining);
+    $("loop").textContent = String(loopNumber).padStart(2, "0");
+    $("status").textContent = ended
+      ? (remaining > 0 ? "ESCAPED" : "EXPIRED")
+      : "TRAPPED";
+
+    $("clues").innerHTML = [...cluesFound]
+      .map(c => `<span class="clue">✓ ${c}</span>`)
+      .join("");
+
+    for (const id of ["clockBtn", "mirrorBtn", "consoleBtn", "doorBtn", "submit"]) {
+      $(id).disabled = ended;
+    }
+    $("code").disabled = ended;
+  }
+
+  function inspect(object) {
+    if (ended) return;
+
+    if (inspectedThisLoop.has(object)) {
+      writeLog("SYSTEM", "You already inspected this. Look somewhere else.");
+      return;
+    }
+
+    inspectedThisLoop.add(object);
+
+    const scenes = {
+      clock: {
+        symbol: "◷",
+        title: "The broken clock",
+        text: "The clock is frozen at 03:17. Its second hand still twitches."
+      },
+      mirror: {
+        symbol: "▧",
+        title: "The cracked mirror",
+        text: "Your reflection whispers: 'The final digit is four.' Then it smiles a moment too late."
+      },
+      console: {
+        symbol: "⌘",
+        title: "The terminal",
+        text: "ACCESS DENIED. A message appears: 'Use the clock's time, then append the final digit. Five digits. No spaces.'"
+      },
+      door: {
+        symbol: "▣",
+        title: "The exit",
+        text: "A steel door with a five-digit keypad. Behind it, you hear something imitating your voice."
+      }
+    };
+
+    const scene = scenes[object];
+    $("symbol").textContent = scene.symbol;
+    $("sceneTitle").textContent = scene.title;
+    $("description").textContent = scene.text;
+
+    if (!cluesFound.has(object)) {
+      cluesFound.add(object);
+      writeLog("DISCOVERY", scene.text);
+    } else {
+      writeLog("INVESTIGATION", scene.text);
+    }
+
+    updateUI();
+  }
+
+  function tryCode() {
+    if (ended) return;
+
+    const value = $("code").value.trim();
+
+    if (value === SECRET_CODE) {
+      winGame();
+    } else {
+      writeLog("ACCESS DENIED",
+        value.length !== 5
+          ? "The keypad requires exactly five digits."
+          : "Incorrect code. The room shudders. You hear a clock ticking faster.");
+      $("code").value = "";
+    }
+  }
+
+  function winGame() {
+    ended = true;
+    clearInterval(interval);
+
+    $("symbol").textContent = "✦";
+    $("sceneTitle").textContent = "YOU ESCAPED.";
+    $("description").textContent =
+      `The door opens. You escaped with ${formatTime(remaining)} remaining, ` +
+      `after ${loopNumber} loop${loopNumber === 1 ? "" : "s"}. ` +
+      "But the reflection is still smiling.";
+    writeLog("SIMULATION COMPLETE",
+      "Escape confirmed. Or is this just another layer?");
+    $("restart").classList.remove("hidden");
+    updateUI();
+  }
+
+  function loseGame() {
+    ended = true;
+    clearInterval(interval);
+
+    $("symbol").textContent = "⌛";
+    $("sceneTitle").textContent = "TIME IS UP.";
+    $("description").textContent =
+      "The clock strikes zero. The lights go out. " +
+      "Somewhere, another version of you wakes up.";
+    writeLog("SIMULATION FAILED",
+      "You ran out of time. Your discoveries are lost with this run.");
+    $("restart").classList.remove("hidden");
+    updateUI();
+  }
+
+  function tick() {
+    if (ended) return;
+
+    remaining--;
+    loopRemaining--;
+
+    if (remaining <= 0) {
+      remaining = 0;
+      updateUI();
+      loseGame();
+      return;
+    }
+
+    if (loopRemaining <= 0) {
+      loopNumber++;
+      loopRemaining = LOOP_TIME;
+      inspectedThisLoop.clear();
+
+      $("symbol").textContent = "↻";
+      $("sceneTitle").textContent = "THE LOOP RESETS.";
+      $("description").textContent =
+        "The room reconstructs itself. The clock returns to 03:17. " +
+        "But you remember everything.";
+
+      writeLog("LOOP RESET",
+        `Loop ${loopNumber} begins. Your discovered clues remain. What will you do differently?`);
+    }
+
+    updateUI();
+  }
+
+  function startGame() {
+    clearInterval(interval);
+
+    remaining = TOTAL_TIME;
+    loopNumber = 1;
+    loopRemaining = LOOP_TIME;
+    cluesFound = new Set();
+    inspectedThisLoop = new Set();
+    ended = false;
+
+    $("code").value = "";
+    $("symbol").textContent = "⌁";
+    $("sceneTitle").textContent = "You wake up.";
+    $("description").textContent =
+      "A silent room. A locked door. A clock counting backward. " +
+      "A voice whispers: 'You have ten minutes. Remember what matters.'";
+
+    $("restart").classList.add("hidden");
+    writeLog("SYSTEM", "Simulation started. Investigate the room. Your discoveries survive the loop resets.");
+    updateUI();
+
+    interval = setInterval(tick, 1000);
+  }
+
+  $("code").addEventListener("keydown", event => {
+    if (event.key === "Enter") tryCode();
+  });
+
+  startGame();
+</script>
+</body>
+</html>
